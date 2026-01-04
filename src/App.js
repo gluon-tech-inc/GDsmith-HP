@@ -12,13 +12,68 @@ function App() {
     company: "",
   });
 
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    // エラーをクリア
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" });
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // 会社名のバリデーション
+    if (!formData.company.trim()) {
+      newErrors.company = "会社名は必須です";
+    }
+
+    // お名前のバリデーション
+    if (!formData.name.trim()) {
+      newErrors.name = "お名前は必須です";
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = "お名前は2文字以上で入力してください";
+    }
+
+    // メールアドレスのバリデーション
+    if (!formData.email.trim()) {
+      newErrors.email = "メールアドレスは必須です";
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        newErrors.email = "正しいメールアドレスを入力してください";
+      }
+    }
+
+    // メッセージのバリデーション
+    if (!formData.message.trim()) {
+      newErrors.message = "メッセージは必須です";
+    } else if (formData.message.trim().length < 10) {
+      newErrors.message = "メッセージは10文字以上で入力してください";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // 2重送信防止
+    if (isSubmitting) {
+      return;
+    }
+
+    // バリデーション
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
     const serviceID = "service_s8o48g5";
     const userID = "KaXDh5Y6K7Kc58Rzo"; 
   
@@ -26,23 +81,28 @@ function App() {
     const templateIDs = ["template_p57jupy", "template_2s0o8ba"];
   
     try {
-      await Promise.all(
+      // 2つのテンプレートに並列でメールを送信
+      const results = await Promise.all(
         templateIDs.map((templateID) =>
           emailjs.send(serviceID, templateID,
             {
-            name: formData.name,
-            email: formData.email,
-            message: formData.message,
-            company:formData.company,
+            name: formData.name.trim(),
+            email: formData.email.trim(),
+            message: formData.message.trim(),
+            company: formData.company.trim(),
           }, userID)
         )
       );
   
+      console.log("メール送信成功:", results);
       alert("メールが送信されました！");
       setFormData({ name: "", email: "", message: "", company: "" });
+      setErrors({});
     } catch (error) {
       console.error("メール送信に失敗しました", error);
-      alert("メール送信に失敗しました...");
+      alert("メール送信に失敗しました。しばらく時間をおいて再度お試しください。");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -53,8 +113,8 @@ function App() {
   };
 
   const closeMenu = () => {
-    if(menuOpen){
-      setMenuOpen(!menuOpen);
+    if (menuOpen) {
+      setMenuOpen(false);
     }
   };
 
@@ -62,19 +122,30 @@ function App() {
     <div className="container" onClick={closeMenu}>
       {/* ナビゲーションバー */}
       <nav className="navbar">
-        <div className="logo">GDsmith</div>
+        <div className="logo">
+          <img src={process.env.PUBLIC_URL + "/gluontech_logo.png"} alt="グルーオンテック" className="logo-image" />
+          <span className="logo-text">グルーオンテック</span>
+        </div>
         <div className={`nav-links ${menuOpen ? "open" : ""}`}>
-          <a href="/">ホーム</a>
+          <a href="#top" onClick={toggleMenu}>ホーム</a>
           <a href="#services" onClick={toggleMenu}>サービス</a>
           <a href="#about" onClick={toggleMenu}>会社概要</a>
           <a href="#contact" onClick={toggleMenu}>お問い合わせ</a>
         </div>
         {/* ハンバーガーボタン */}
-        <div className="hamburger" onClick={toggleMenu}>
+        <button 
+          className="hamburger" 
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleMenu();
+          }}
+          aria-label="メニューを開く"
+          aria-expanded={menuOpen}
+        >
           <div className="bar"></div>
           <div className="bar"></div>
           <div className="bar"></div>
-        </div>
+        </button>
       </nav>
 
       {/* ヒーローセクション */}
@@ -149,52 +220,64 @@ function App() {
       <section id="contact" className="contact">
         <h2>お問い合わせ</h2>
         <form onSubmit={handleSubmit} className="contact-form">
-        <label>会社名</label>
+          <label>会社名 <span className="required">*</span></label>
           <input
             type="text"
             name="company"
             value={formData.company}
             onChange={handleChange}
-            required
+            disabled={isSubmitting}
+            className={errors.company ? "error" : ""}
           />
-          <label>お名前</label>
+          {errors.company && <span className="error-message">{errors.company}</span>}
+
+          <label>お名前 <span className="required">*</span></label>
           <input
             type="text"
             name="name"
             value={formData.name}
             onChange={handleChange}
-            required
+            disabled={isSubmitting}
+            className={errors.name ? "error" : ""}
           />
-          <label>メールアドレス</label>
+          {errors.name && <span className="error-message">{errors.name}</span>}
+
+          <label>メールアドレス <span className="required">*</span></label>
           <input
             type="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
-            required
+            disabled={isSubmitting}
+            className={errors.email ? "error" : ""}
           />
-          <label>メッセージ</label>
+          {errors.email && <span className="error-message">{errors.email}</span>}
+
+          <label>メッセージ <span className="required">*</span></label>
           <textarea
             rows={10}
             name="message"
             value={formData.message}
             onChange={handleChange}
-            required
+            disabled={isSubmitting}
+            className={errors.message ? "error" : ""}
           ></textarea>
-          <button type="submit" className="submit-button">
-            送信
+          {errors.message && <span className="error-message">{errors.message}</span>}
+
+          <button type="submit" className="submit-button" disabled={isSubmitting}>
+            {isSubmitting ? "送信中..." : "送信"}
           </button>
         </form>
       </section>
 
       {/* フッター */}
       <footer className="footer">
-        We are Information Technology Company. The representative is Mikuni Fukumoto.
+        We are an Information Technology Company. Representative: Mikuni Fukumoto.
       </footer>
 
       <footer className="footer-mobile">
-        We are Information Technology Company.<br />
-        The representative is Mikuni Fukumoto.
+        We are an Information Technology Company.<br />
+        Representative: Mikuni Fukumoto.
       </footer>
     </div>
   );
