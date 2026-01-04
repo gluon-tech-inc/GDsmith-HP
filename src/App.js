@@ -19,7 +19,7 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const serviceID = "service_9mlodq8";
+    const serviceID = "service_s8o48g5";
     const userID = "KaXDh5Y6K7Kc58Rzo"; 
   
     // 複数のテンプレートIDを配列で指定
